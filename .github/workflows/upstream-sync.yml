@@ -31,7 +31,7 @@ on:
       dry_run:
         description: 'Dry run - check for changes without merging'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       target_ref:
         description: 'Upstream ref to sync (default: main)'
@@ -58,17 +58,18 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     outputs:
       upstream_commits: ${{ steps.check.outputs.upstream_commits }}
-      sync_status: ${{ steps.sync.outputs.status }}
+      sync_status: ${{ steps.set-status.outputs.status }}
 
     steps:
       # =========================================================================
       # Setup
       # =========================================================================
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
@@ -81,8 +82,9 @@ jobs:
 
       - name: Add Upstream Remote
         run: |
-          git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git || true
-          git fetch upstream
+          git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git 2>/dev/null || true
+          git fetch upstream --quiet
+          echo "Upstream remote configured and fetched."
 
       # =========================================================================
       # Check for Changes
@@ -92,6 +94,12 @@ jobs:
         run: |
           UPSTREAM_REF="${{ inputs.target_ref || 'main' }}"
           echo "Checking for changes from upstream/${UPSTREAM_REF}..."
+
+          # Verify upstream ref exists
+          if ! git rev-parse --verify "upstream/${UPSTREAM_REF}" >/dev/null 2>&1; then
+            echo "::error::Upstream ref 'upstream/${UPSTREAM_REF}' does not exist"
+            exit 1
+          fi
 
           # Count commits ahead of our branch
           UPSTREAM_COMMITS=$(git rev-list HEAD..upstream/${UPSTREAM_REF} --count)
@@ -116,24 +124,33 @@ jobs:
 
       - name: Skip if No Changes
         if: steps.check.outputs.upstream_commits == '0'
-        run: echo "No upstream changes to sync. Skipping."
+        id: skip
+        run: |
+          echo "No upstream changes to sync. Skipping."
+          echo "skipped=true" >> $GITHUB_OUTPUT
 
       # =========================================================================
       # Dry Run Check
       # =========================================================================
       - name: Dry Run - Check Merge Feasibility
-        if: inputs.dry_run == 'true' && steps.check.outputs.upstream_commits != '0'
+        if: inputs.dry_run == true && steps.check.outputs.upstream_commits != '0'
         run: |
           UPSTREAM_REF="${{ inputs.target_ref || 'main' }}"
           echo "Dry run: checking if merge would succeed..."
 
           if git merge --no-commit --no-ff upstream/${UPSTREAM_REF} 2>/dev/null; then
-            echo "Merge would succeed without conflicts."
+            echo "✅ Merge would succeed without conflicts."
+            echo "## Dry Run Result" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Merge would succeed without conflicts." >> $GITHUB_STEP_SUMMARY
             git merge --abort
           else
-            echo "Merge would have conflicts:"
-            git diff --name-only --diff-filter=U
-            git merge --abort
+            echo "⚠️ Merge would have conflicts:"
+            git diff --name-only --diff-filter=U || true
+            echo "## Dry Run Result" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Merge would have conflicts. See logs for details." >> $GITHUB_STEP_SUMMARY
+            git merge --abort 2>/dev/null || true
           fi
 
       # =========================================================================
@@ -141,19 +158,20 @@ jobs:
       # =========================================================================
       - name: Attempt Merge
         id: merge
-        if: inputs.dry_run != 'true' && steps.check.outputs.upstream_commits != '0'
-        continue-on-error: true
+        if: inputs.dry_run != true && steps.check.outputs.upstream_commits != '0'
         run: |
           UPSTREAM_REF="${{ inputs.target_ref || 'main' }}"
           echo "Attempting merge from upstream/${UPSTREAM_REF}..."
 
+          UPSTREAM_SHA=$(git rev-parse --short upstream/${UPSTREAM_REF})
+
           if git merge upstream/${UPSTREAM_REF} --no-edit \
-            -m "chore: sync with upstream open-webui ($(git rev-parse --short upstream/${UPSTREAM_REF}))"; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "Merge successful!"
+            -m "chore: sync with upstream open-webui (${UPSTREAM_SHA})"; then
+            echo "merge_result=success" >> $GITHUB_OUTPUT
+            echo "✅ Merge successful!"
           else
-            echo "status=conflict" >> $GITHUB_OUTPUT
-            echo "Merge has conflicts."
+            echo "merge_result=conflict" >> $GITHUB_OUTPUT
+            echo "⚠️ Merge has conflicts."
             # Abort the failed merge
             git merge --abort
           fi
@@ -162,23 +180,21 @@ jobs:
       # Success: Push Changes
       # =========================================================================
       - name: Push Merged Changes
-        id: sync
-        if: steps.merge.outputs.status == 'success'
+        if: steps.merge.outputs.merge_result == 'success'
         run: |
           echo "Pushing merged changes..."
           git push origin ${{ env.TARGET_BRANCH }}
-          echo "status=success" >> $GITHUB_OUTPUT
 
           echo "## Sync Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully merged **${{ steps.check.outputs.upstream_commits }}** commits from upstream." >> $GITHUB_STEP_SUMMARY
+          echo "✅ Successfully merged **${{ steps.check.outputs.upstream_commits }}** commits from upstream." >> $GITHUB_STEP_SUMMARY
 
       # =========================================================================
       # Conflict: Create PR
       # =========================================================================
       - name: Create Conflict Resolution PR
-        if: steps.merge.outputs.status == 'conflict'
-        uses: peter-evans/create-pull-request@v6
+        if: steps.merge.outputs.merge_result == 'conflict'
+        uses: peter-evans/create-pull-request@v6.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'chore: upstream sync (conflicts need resolution)'
@@ -205,6 +221,7 @@ jobs:
 
             2. Fetch upstream and merge:
                ```bash
+               git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git || true
                git fetch upstream
                git merge upstream/${{ inputs.target_ref || 'main' }}
                ```
@@ -213,7 +230,7 @@ jobs:
 
             4. Run tests to verify:
                ```bash
-               npm ci --force
+               npm ci
                npm run lint:frontend
                npm run test:frontend
                npm run build
@@ -241,18 +258,35 @@ jobs:
             needs-review
 
       - name: Report Conflict Status
-        if: steps.merge.outputs.status == 'conflict'
+        if: steps.merge.outputs.merge_result == 'conflict'
         run: |
-          echo "status=conflict" >> $GITHUB_OUTPUT
-
           echo "## Sync Requires Manual Resolution" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "A pull request has been created for manual conflict resolution." >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ A pull request has been created for manual conflict resolution." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "See the PR for detailed instructions." >> $GITHUB_STEP_SUMMARY
 
+      # =========================================================================
+      # Set Final Status (for job output)
+      # =========================================================================
+      - name: Set Sync Status
+        id: set-status
+        if: always()
+        run: |
+          if [ "${{ steps.skip.outputs.skipped }}" == "true" ]; then
+            echo "status=skipped" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.merge.outputs.merge_result }}" == "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          elif [ "${{ steps.merge.outputs.merge_result }}" == "conflict" ]; then
+            echo "status=conflict" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.dry_run }}" == "true" ]; then
+            echo "status=dry_run" >> $GITHUB_OUTPUT
+          else
+            echo "status=unknown" >> $GITHUB_OUTPUT
+          fi
+
   # ===========================================================================
-  # Notification Job (Optional - for Slack/Discord/etc)
+  # Notification Job - Create issue on conflict
   # ===========================================================================
   notify:
     name: Notify on Conflict
@@ -260,19 +294,28 @@ jobs:
     needs: sync
     if: needs.sync.outputs.sync_status == 'conflict'
 
+    permissions:
+      issues: write
+
     steps:
       - name: Create Issue for Tracking
-        uses: actions/github-script@v7
+        uses: actions/github-script@v7.0.1
+        env:
+          UPSTREAM_COMMITS: ${{ needs.sync.outputs.upstream_commits }}
         with:
           script: |
-            const title = `Upstream sync requires attention (${new Date().toISOString().split('T')[0]})`;
+            const today = new Date().toISOString().split('T')[0];
+            const title = `Upstream sync requires attention (${today})`;
             const body = `The weekly upstream sync from open-webui/open-webui encountered merge conflicts.
 
             Please review the automatically created PR and resolve the conflicts.
 
             **Upstream commits**: ${process.env.UPSTREAM_COMMITS || 'unknown'}
 
-            See CONFLICTS.md for guidance on resolving common conflicts.`;
+            See CONFLICTS.md for guidance on resolving common conflicts.
+
+            ---
+            *This issue was automatically created by the upstream-sync workflow.*`;
 
             // Check if similar issue already exists
             const issues = await github.rest.issues.listForRepo({
@@ -282,14 +325,19 @@ jobs:
               labels: 'upstream-sync'
             });
 
-            const existingIssue = issues.data.find(i => i.title.startsWith('Upstream sync requires attention'));
+            const existingIssue = issues.data.find(i =>
+              i.title.startsWith('Upstream sync requires attention')
+            );
 
             if (!existingIssue) {
-              await github.rest.issues.create({
+              const created = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: title,
                 body: body,
                 labels: ['upstream-sync', 'needs-review']
               });
+              console.log(`Created issue #${created.data.number}`);
+            } else {
+              console.log(`Issue already exists: #${existingIssue.number}`);
             }

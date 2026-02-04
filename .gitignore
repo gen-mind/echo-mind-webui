@@ -310,3 +310,18 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# =============================================================================
+# EchoMind Specific
+# =============================================================================
+# Preserve example env files
+!ECHOMIND.env.example
+
+# Local development overrides
+.env.echomind.local
+
+# EchoMind build artifacts
+.echomind-cache/
+
+# Local development notes (not for commit)
+excluded/
