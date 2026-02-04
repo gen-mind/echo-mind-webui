@@ -1,0 +1,77 @@
+# =============================================================================
+# EchoMind WebUI Code Owners
+# =============================================================================
+#
+# This file defines code ownership for the EchoMind customizations.
+# Code owners are automatically requested for review when someone opens a PR
+# that modifies code they own.
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Format: <pattern> <owner1> <owner2> ...
+# =============================================================================
+
+# =============================================================================
+# Global Owners (Fallback)
+# =============================================================================
+# These owners are requested for review if no more specific rule matches.
+*                                   @gen-mind/echomind-team
+
+# =============================================================================
+# EchoMind Custom Components
+# =============================================================================
+# All EchoMind-specific additions require team review.
+
+# EchoMind Svelte components
+/src/lib/components/echomind/       @gen-mind/frontend-team
+/src/lib/components/layout/         @gen-mind/frontend-team
+
+# EchoMind API clients
+/src/lib/apis/echomind/             @gen-mind/frontend-team
+
+# EchoMind custom routes/pages
+/src/routes/(app)/connectors/       @gen-mind/frontend-team
+/src/routes/(app)/documents/        @gen-mind/frontend-team
+/src/routes/(app)/embedding-models/ @gen-mind/frontend-team
+/src/routes/(app)/teams/            @gen-mind/frontend-team
+/src/routes/(app)/assistants/       @gen-mind/frontend-team
+/src/routes/(app)/llms/             @gen-mind/frontend-team
+
+# EchoMind stores
+/src/lib/stores/echomind/           @gen-mind/frontend-team
+
+# =============================================================================
+# Configuration Files
+# =============================================================================
+# Changes to configuration require careful review.
+
+# GitHub workflows
+/.github/workflows/echomind-*.yml   @gen-mind/devops-team
+/.github/workflows/upstream-sync.yml @gen-mind/devops-team
+
+# Environment configuration
+/ECHOMIND.env.example               @gen-mind/devops-team
+
+# Conflict documentation
+/CONFLICTS.md                       @gen-mind/frontend-team @gen-mind/devops-team
+
+# Docker configuration
+/Dockerfile                         @gen-mind/devops-team
+/docker-compose*.yaml               @gen-mind/devops-team
+
+# =============================================================================
+# High-Risk Files (Upstream Conflict Prone)
+# =============================================================================
+# These files are likely to conflict during upstream sync.
+# Changes require extra scrutiny.
+
+/src/lib/components/layout/Sidebar.svelte @gen-mind/frontend-team
+/src/lib/apis/index.ts                    @gen-mind/frontend-team
+/src/routes/+layout.svelte                @gen-mind/frontend-team
+/src/lib/stores/index.ts                  @gen-mind/frontend-team
+
+# =============================================================================
+# Documentation
+# =============================================================================
+/README.md                          @gen-mind/echomind-team
+/docs/echomind/                     @gen-mind/echomind-team

@@ -1,0 +1,174 @@
+# =============================================================================
+# EchoMind CI Pipeline
+# =============================================================================
+#
+# Continuous Integration workflow for EchoMind WebUI customizations.
+# Runs on the echomind-customizations branch and feature branches.
+#
+# This workflow:
+# - Lints and formats frontend code
+# - Runs frontend unit tests
+# - Builds the production bundle
+# - Validates TypeScript types
+#
+# Reference: https://docs.github.com/en/actions/using-workflows
+# =============================================================================
+
+name: EchoMind CI
+
+on:
+  push:
+    branches:
+      - echomind-customizations
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - echomind-customizations
+
+# Prevent concurrent runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  # Cache version - increment to invalidate caches
+  CACHE_VERSION: 'v1'
+
+jobs:
+  # ===========================================================================
+  # Lint Job - Code Quality Checks
+  # ===========================================================================
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --force
+
+      - name: Run ESLint
+        run: npm run lint:frontend
+
+      - name: Check Formatting (Prettier)
+        run: npx prettier --check "**/*.{js,ts,svelte,css,md,json}" --ignore-path .prettierignore
+
+      - name: Check TypeScript Types
+        run: npm run check
+
+  # ===========================================================================
+  # Test Job - Frontend Unit Tests
+  # ===========================================================================
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --force
+
+      - name: Run Vitest
+        run: npm run test:frontend -- --coverage
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ===========================================================================
+  # Build Job - Production Build Verification
+  # ===========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint, test]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --force
+
+      - name: Build Production Bundle
+        run: npm run build
+        env:
+          # Build-time environment variables
+          VITE_ECHOMIND_API_URL: ''
+          VITE_ECHOMIND_WS_URL: ''
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/
+          retention-days: 7
+
+      - name: Report Build Size
+        run: |
+          echo "## Build Size Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          find build -type f -name "*.js" -o -name "*.css" | head -20 | while read file; do
+            size=$(du -h "$file" | cut -f1)
+            echo "| ${file#build/} | $size |" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # ===========================================================================
+  # Docker Build Job - Container Image Verification
+  # ===========================================================================
+  docker-build:
+    name: Docker Build (Verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [build]
+    # Only run on PR to echomind-customizations
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image (No Push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: echomind-webui:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
