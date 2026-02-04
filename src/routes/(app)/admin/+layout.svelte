@@ -66,6 +66,34 @@
 							href="/admin">{$i18n.t('Users')}</a
 						>
 
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/teams')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/teams">{$i18n.t('Teams')}</a
+						>
+
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/assistants')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/assistants">{$i18n.t('Assistants')}</a
+						>
+
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/llms')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/llms">{$i18n.t('LLMs')}</a
+						>
+
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/embedding-models')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/embedding-models">{$i18n.t('Embedding Models')}</a
+						>
+
 						<!-- <a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/analytics')
 								? ''
