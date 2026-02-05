@@ -15,9 +15,10 @@ describe('Upload API', () => {
 	describe('initiateUpload', () => {
 		it('should initiate upload successfully', async () => {
 			const mockResponse = {
-				upload_id: 'upload-123',
+				document_id: 123,
 				upload_url: 'https://minio.example.com/presigned-url',
-				expires_at: '2024-01-01T01:00:00Z'
+				expires_in: 3600,
+				storage_path: 'uploads/123/test.pdf'
 			};
 
 			global.fetch = vi.fn().mockResolvedValue({
@@ -26,13 +27,13 @@ describe('Upload API', () => {
 			});
 
 			const result = await initiateUpload('test-token', {
-				file_name: 'test.pdf',
-				file_type: 'application/pdf',
-				file_size: 1024
+				filename: 'test.pdf',
+				content_type: 'application/pdf',
+				size: 1024
 			});
 
 			expect(fetch).toHaveBeenCalledWith(
-				expect.stringContaining('/upload/initiate'),
+				expect.stringContaining('/documents/upload/initiate'),
 				expect.objectContaining({
 					method: 'POST',
 					headers: expect.objectContaining({
@@ -44,31 +45,6 @@ describe('Upload API', () => {
 			expect(result).toEqual(mockResponse);
 		});
 
-		it('should include connector_id when provided', async () => {
-			global.fetch = vi.fn().mockResolvedValue({
-				ok: true,
-				json: () => Promise.resolve({
-					upload_id: 'upload-123',
-					upload_url: 'https://example.com',
-					expires_at: '2024-01-01T01:00:00Z'
-				})
-			});
-
-			await initiateUpload('test-token', {
-				file_name: 'test.pdf',
-				file_type: 'application/pdf',
-				file_size: 1024,
-				connector_id: 5
-			});
-
-			expect(fetch).toHaveBeenCalledWith(
-				expect.any(String),
-				expect.objectContaining({
-					body: expect.stringContaining('"connector_id":5')
-				})
-			);
-		});
-
 		it('should throw error on initiation failure', async () => {
 			global.fetch = vi.fn().mockResolvedValue({
 				ok: false,
@@ -77,9 +53,9 @@ describe('Upload API', () => {
 
 			await expect(
 				initiateUpload('test-token', {
-					file_name: 'huge.pdf',
-					file_type: 'application/pdf',
-					file_size: 1000000000
+					filename: 'huge.pdf',
+					content_type: 'application/pdf',
+					size: 1000000000
 				})
 			).rejects.toEqual('File too large');
 		});
@@ -99,36 +75,17 @@ describe('Upload API', () => {
 			});
 
 			const result = await completeUpload('test-token', {
-				upload_id: 'upload-123'
+				document_id: 123
 			});
 
 			expect(fetch).toHaveBeenCalledWith(
-				expect.stringContaining('/upload/complete'),
+				expect.stringContaining('/documents/upload/complete'),
 				expect.objectContaining({
 					method: 'POST',
-					body: expect.stringContaining('upload-123')
+					body: expect.stringContaining('123')
 				})
 			);
 			expect(result).toEqual(mockDocument);
-		});
-
-		it('should include title when provided', async () => {
-			global.fetch = vi.fn().mockResolvedValue({
-				ok: true,
-				json: () => Promise.resolve({ id: 1, title: 'Custom Title' })
-			});
-
-			await completeUpload('test-token', {
-				upload_id: 'upload-123',
-				title: 'Custom Title'
-			});
-
-			expect(fetch).toHaveBeenCalledWith(
-				expect.any(String),
-				expect.objectContaining({
-					body: expect.stringContaining('Custom Title')
-				})
-			);
 		});
 
 		it('should throw error on completion failure', async () => {
@@ -138,7 +95,7 @@ describe('Upload API', () => {
 			});
 
 			await expect(
-				completeUpload('test-token', { upload_id: 'expired-123' })
+				completeUpload('test-token', { document_id: 123 })
 			).rejects.toEqual('Upload expired');
 		});
 	});
@@ -146,8 +103,7 @@ describe('Upload API', () => {
 	describe('abortUpload', () => {
 		it('should abort upload successfully', async () => {
 			const mockResponse = {
-				message: 'Upload aborted',
-				upload_id: 'upload-123'
+				success: true
 			};
 
 			global.fetch = vi.fn().mockResolvedValue({
@@ -156,14 +112,14 @@ describe('Upload API', () => {
 			});
 
 			const result = await abortUpload('test-token', {
-				upload_id: 'upload-123'
+				document_id: 123
 			});
 
 			expect(fetch).toHaveBeenCalledWith(
-				expect.stringContaining('/upload/abort'),
+				expect.stringContaining('/documents/upload/abort'),
 				expect.objectContaining({
 					method: 'POST',
-					body: expect.stringContaining('upload-123')
+					body: expect.stringContaining('123')
 				})
 			);
 			expect(result).toEqual(mockResponse);
@@ -176,7 +132,7 @@ describe('Upload API', () => {
 			});
 
 			await expect(
-				abortUpload('test-token', { upload_id: 'invalid-123' })
+				abortUpload('test-token', { document_id: 123 })
 			).rejects.toEqual('Upload not found');
 		});
 	});
@@ -303,9 +259,10 @@ describe('Upload API', () => {
 		it('should complete full upload flow successfully', async () => {
 			const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
 			const mockInitResponse = {
-				upload_id: 'upload-123',
+				document_id: 123,
 				upload_url: 'https://minio.example.com/presigned',
-				expires_at: '2024-01-01T01:00:00Z'
+				expires_in: 3600,
+				storage_path: 'uploads/123/test.pdf'
 			};
 			const mockDocument = {
 				id: 1,
@@ -342,7 +299,7 @@ describe('Upload API', () => {
 			expect(mockXHR.open).toHaveBeenCalledWith('PUT', mockInitResponse.upload_url);
 		});
 
-		it('should pass options through the upload flow', async () => {
+		it('should pass onProgress through the upload flow', async () => {
 			const mockFile = new File(['test'], 'test.pdf', { type: 'application/pdf' });
 			const onProgress = vi.fn();
 
@@ -354,15 +311,16 @@ describe('Upload API', () => {
 						ok: true,
 						json: () =>
 							Promise.resolve({
-								upload_id: 'upload-123',
+								document_id: 123,
 								upload_url: 'https://example.com/upload',
-								expires_at: '2024-01-01T01:00:00Z'
+								expires_in: 3600,
+								storage_path: 'uploads/123/test.pdf'
 							})
 					});
 				}
 				return Promise.resolve({
 					ok: true,
-					json: () => Promise.resolve({ id: 1, title: 'Custom Title' })
+					json: () => Promise.resolve({ id: 1, title: 'test.pdf' })
 				});
 			});
 
@@ -381,23 +339,17 @@ describe('Upload API', () => {
 			});
 
 			await uploadDocument('test-token', mockFile, {
-				title: 'Custom Title',
-				connectorId: 5,
 				onProgress
 			});
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				expect.stringContaining('/upload/initiate'),
-				expect.objectContaining({
-					body: expect.stringContaining('"connector_id":5')
-				})
+				expect.stringContaining('/documents/upload/initiate'),
+				expect.any(Object)
 			);
 
 			expect(global.fetch).toHaveBeenCalledWith(
-				expect.stringContaining('/upload/complete'),
-				expect.objectContaining({
-					body: expect.stringContaining('Custom Title')
-				})
+				expect.stringContaining('/documents/upload/complete'),
+				expect.any(Object)
 			);
 
 			expect(onProgress).toHaveBeenCalledWith(100);

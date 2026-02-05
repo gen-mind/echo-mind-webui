@@ -3,30 +3,28 @@ import type { Document } from './documents';
 
 // Types
 export interface InitiateUploadRequest {
-	file_name: string;
-	file_type: string;
-	file_size: number;
-	connector_id?: number;
+	filename: string;
+	content_type: string;
+	size: number;
 }
 
 export interface InitiateUploadResponse {
-	upload_id: string;
+	document_id: number;
 	upload_url: string;
-	expires_at: string;
+	expires_in: number;
+	storage_path: string;
 }
 
 export interface CompleteUploadRequest {
-	upload_id: string;
-	title?: string;
+	document_id: number;
 }
 
 export interface AbortUploadRequest {
-	upload_id: string;
+	document_id: number;
 }
 
 export interface AbortUploadResponse {
-	message: string;
-	upload_id: string;
+	success: boolean;
 }
 
 // API Functions
@@ -36,7 +34,7 @@ export const initiateUpload = async (
 ): Promise<InitiateUploadResponse> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/upload/initiate`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/upload/initiate`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -68,7 +66,7 @@ export const completeUpload = async (
 ): Promise<Document> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/upload/complete`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/upload/complete`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -100,7 +98,7 @@ export const abortUpload = async (
 ): Promise<AbortUploadResponse> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/upload/abort`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/documents/upload/abort`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -180,10 +178,9 @@ export const uploadDocument = async (
 ): Promise<Document> => {
 	// Step 1: Initiate upload
 	const initResponse = await initiateUpload(token, {
-		file_name: file.name,
-		file_type: file.type,
-		file_size: file.size,
-		connector_id: options?.connectorId
+		filename: file.name,
+		content_type: file.type,
+		size: file.size
 	});
 
 	// Step 2: Upload to pre-signed URL
@@ -191,8 +188,7 @@ export const uploadDocument = async (
 
 	// Step 3: Complete upload
 	const document = await completeUpload(token, {
-		upload_id: initResponse.upload_id,
-		title: options?.title
+		document_id: initResponse.document_id
 	});
 
 	return document;
