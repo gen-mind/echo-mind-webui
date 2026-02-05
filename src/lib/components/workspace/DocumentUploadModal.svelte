@@ -6,8 +6,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	import { uploadDocument, getConnectors } from '$lib/apis/echomind';
-	import type { Connector } from '$lib/apis/echomind';
+	import { uploadDocument } from '$lib/apis/echomind';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -15,35 +14,16 @@
 	export let show = false;
 
 	let loading = false;
-	let connectorsLoading = true;
-	let connectors: Connector[] = [];
 	let uploadProgress = 0;
 
 	// Form fields
 	let files: FileList | null = null;
 	let title = '';
-	let connectorId: number | null = null;
 	let fileInput: HTMLInputElement;
-
-	$: if (show) {
-		loadConnectors();
-	}
-
-	async function loadConnectors() {
-		connectorsLoading = true;
-		try {
-			const res = await getConnectors(localStorage.token, { page: 1, page_size: 100 });
-			connectors = res.connectors || [];
-		} catch (e) {
-			toast.error(`Failed to load connectors: ${e}`);
-		}
-		connectorsLoading = false;
-	}
 
 	function resetForm() {
 		files = null;
 		title = '';
-		connectorId = null;
 		uploadProgress = 0;
 		if (fileInput) {
 			fileInput.value = '';
@@ -72,7 +52,6 @@
 			const file = files[0];
 			const result = await uploadDocument(localStorage.token, file, {
 				title: title.trim() || undefined,
-				connectorId: connectorId || undefined,
 				onProgress: (progress) => {
 					uploadProgress = progress;
 				}
@@ -118,14 +97,15 @@
 		'.csv',
 		'.xls',
 		'.xlsx',
-		'.json',
-		'.xml',
-		'.mp3',
-		'.wav',
-		'.mp4',
+		'.ppt',
+		'.pptx',
 		'.png',
 		'.jpg',
-		'.jpeg'
+		'.jpeg',
+		'.gif',
+		'.webp',
+		'.bmp',
+		'.tiff'
 	].join(',');
 </script>
 
@@ -204,7 +184,7 @@
 								{$i18n.t('Drag and drop a file here, or click to browse')}
 							</p>
 							<p class="text-xs text-gray-400 mt-2">
-								{$i18n.t('Supported: PDF, DOC, TXT, MD, CSV, XLS, MP3, MP4, images')}
+								{$i18n.t('Supported: PDF, Word, Excel, PowerPoint, text files, images')}
 							</p>
 						{/if}
 					</div>
@@ -222,36 +202,6 @@
 						class="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 					/>
 				</label>
-
-				<!-- Connector -->
-				<div>
-					<span class="block text-sm font-medium mb-1 dark:text-gray-200">
-						{$i18n.t('Connector')}
-					</span>
-					{#if connectorsLoading}
-						<div class="flex items-center gap-2 text-gray-500">
-							<Spinner class="w-4 h-4" />
-							<span>{$i18n.t('Loading connectors...')}</span>
-						</div>
-					{:else}
-						<label class="block">
-							<select
-								bind:value={connectorId}
-								class="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-							>
-								<option value={null}>{$i18n.t('No connector (standalone document)')}</option>
-								{#each connectors as connector}
-									<option value={connector.id}>
-										{connector.name}
-									</option>
-								{/each}
-							</select>
-						</label>
-						<p class="mt-1 text-xs text-gray-500">
-							{$i18n.t('Associate this document with a connector for organization')}
-						</p>
-					{/if}
-				</div>
 
 				<!-- Upload Progress -->
 				{#if loading && uploadProgress > 0}

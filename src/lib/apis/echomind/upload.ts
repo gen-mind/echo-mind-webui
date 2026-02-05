@@ -172,7 +172,6 @@ export const uploadDocument = async (
 	file: File,
 	options?: {
 		title?: string;
-		connectorId?: number;
 		onProgress?: (progress: number) => void;
 	}
 ): Promise<Document> => {
