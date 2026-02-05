@@ -924,13 +924,3 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
-
-
-####################################
-# ECHOMIND API INTEGRATION
-####################################
-
-# URL of the EchoMind API backend for proxying requests
-# This enables the webui to forward /api/v1/documents/* etc. to EchoMind
-ECHOMIND_API_URL = os.environ.get("ECHOMIND_API_URL", "")
-ECHOMIND_API_ENABLED = bool(ECHOMIND_API_URL)

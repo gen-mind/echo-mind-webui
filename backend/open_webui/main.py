@@ -69,7 +69,6 @@ from open_webui.socket.main import (
 )
 from open_webui.routers import (
     audio,
-    echomind,
     images,
     ollama,
     openai,
@@ -1441,12 +1440,6 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
-
-# EchoMind API proxy - routes /api/v1/documents/*, /api/v1/connectors/*, etc. to EchoMind backend
-from open_webui.env import ECHOMIND_API_ENABLED
-if ECHOMIND_API_ENABLED:
-    app.include_router(echomind.router, prefix="/api/v1", tags=["echomind"])
-    logger.info("EchoMind API proxy enabled")
 
 # SCIM 2.0 API for identity management
 if ENABLE_SCIM:
