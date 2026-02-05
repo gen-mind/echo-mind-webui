@@ -4,10 +4,9 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 	import { getAssistants, deleteAssistant } from '$lib/apis/echomind';
 	import type { Assistant } from '$lib/apis/echomind';
 
@@ -16,12 +15,16 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import AssistantCreateModal from './AssistantCreateModal.svelte';
+	import AssistantEditModal from './AssistantEditModal.svelte';
 
 	let loaded = false;
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
+	let showEditModal = false;
 
 	let selectedItem: Assistant | null = null;
+	let editingItem: Assistant | null = null;
 	let items: Assistant[] = [];
 	let itemsLoading = false;
 
@@ -142,7 +145,14 @@
 
 							<div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
 								<Tooltip content="Edit">
-									<button class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+									<button
+										class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+										aria-label="Edit assistant"
+										on:click={() => {
+											editingItem = item;
+											showEditModal = true;
+										}}
+									>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
@@ -157,6 +167,7 @@
 								<Tooltip content="Delete">
 									<button
 										class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600"
+										aria-label="Delete assistant"
 										on:click={() => {
 											selectedItem = item;
 											showDeleteConfirm = true;
@@ -179,4 +190,25 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Create Modal -->
+	{#if showCreateModal}
+		<AssistantCreateModal
+			bind:show={showCreateModal}
+			on:created={() => {
+				init();
+			}}
+		/>
+	{/if}
+
+	<!-- Edit Modal -->
+	{#if showEditModal && editingItem}
+		<AssistantEditModal
+			bind:show={showEditModal}
+			item={editingItem}
+			on:updated={() => {
+				init();
+			}}
+		/>
+	{/if}
 {/if}

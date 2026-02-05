@@ -4,10 +4,9 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 	import { getDocuments, deleteDocument, searchDocuments } from '$lib/apis/echomind';
 	import type { Document, DocumentStatus } from '$lib/apis/echomind';
 
@@ -16,9 +15,12 @@
 	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import DocumentUploadModal from './DocumentUploadModal.svelte';
 
 	let loaded = false;
 	let showDeleteConfirm = false;
+	let showUploadModal = false;
 
 	let selectedItem: Document | null = null;
 
@@ -139,9 +141,21 @@
 		}}
 	/>
 
+	<DocumentUploadModal
+		bind:show={showUploadModal}
+		on:uploaded={() => init()}
+	/>
+
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 		<div class="flex justify-between items-center">
 			<div class="text-lg font-medium">Documents</div>
+			<button
+				class="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+				on:click={() => (showUploadModal = true)}
+			>
+				<Plus class="w-4 h-4" />
+				Upload Document
+			</button>
 		</div>
 
 		<!-- Search and Filter -->
@@ -208,6 +222,7 @@
 								<Tooltip content="Delete">
 									<button
 										class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+										aria-label="Delete document"
 										on:click={() => {
 											selectedItem = item;
 											showDeleteConfirm = true;

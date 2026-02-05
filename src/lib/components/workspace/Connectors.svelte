@@ -4,15 +4,13 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 	import {
 		getConnectors,
 		deleteConnector,
-		triggerConnectorSync,
-		getConnectorStatus
+		triggerConnectorSync
 	} from '$lib/apis/echomind';
 	import type { Connector, ConnectorType, ConnectorStatus } from '$lib/apis/echomind';
 
@@ -21,16 +19,19 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ConnectorCreateModal from './ConnectorCreateModal.svelte';
+	import ConnectorEditModal from './ConnectorEditModal.svelte';
 
 	let loaded = false;
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
+	let showEditModal = false;
 
 	let selectedItem: Connector | null = null;
+	let editItem: Connector | null = null;
 	let syncingConnectors: Set<number> = new Set();
 
 	let items: Connector[] = [];
-	let total = 0;
 	let itemsLoading = false;
 
 	const typeLabels: Record<ConnectorType, string> = {
@@ -75,7 +76,6 @@
 			const res = await getConnectors(localStorage.token, { page: 1, page_size: 100 });
 			if (res) {
 				items = res.connectors || [];
-				total = res.pagination?.total || 0;
 			}
 		} catch (e) {
 			toast.error(`Failed to load connectors: ${e}`);
@@ -131,6 +131,17 @@
 		on:confirm={() => {
 			if (selectedItem) deleteHandler(selectedItem);
 		}}
+	/>
+
+	<ConnectorCreateModal
+		bind:show={showCreateModal}
+		on:created={() => init()}
+	/>
+
+	<ConnectorEditModal
+		bind:show={showEditModal}
+		item={editItem}
+		on:updated={() => init()}
 	/>
 
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
@@ -221,9 +232,30 @@
 									</button>
 								</Tooltip>
 
+								<Tooltip content="Edit">
+									<button
+										class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+										aria-label="Edit connector"
+										on:click={() => {
+											editItem = item;
+											showEditModal = true;
+										}}
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+
 								<Tooltip content="Delete">
 									<button
 										class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600"
+										aria-label="Delete connector"
 										on:click={() => {
 											selectedItem = item;
 											showDeleteConfirm = true;

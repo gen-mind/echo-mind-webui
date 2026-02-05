@@ -4,10 +4,9 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 	import { getTeams, deleteTeam, getTeamById } from '$lib/apis/echomind';
 	import type { Team, TeamMemberWithUser, TeamMemberRole } from '$lib/apis/echomind';
 
@@ -16,13 +15,17 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import TeamCreateModal from './TeamCreateModal.svelte';
+	import TeamEditModal from './TeamEditModal.svelte';
 
 	let loaded = false;
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
+	let showEditModal = false;
 	let showMembersModal = false;
 
 	let selectedItem: Team | null = null;
+	let editingItem: Team | null = null;
 	let selectedTeamMembers: TeamMemberWithUser[] = [];
 	let loadingMembers = false;
 
@@ -107,6 +110,7 @@
 					<h3 class="text-lg font-medium">{selectedItem.name} - Members</h3>
 					<button
 						class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+						aria-label="Close modal"
 						on:click={() => (showMembersModal = false)}
 					>
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,6 +214,7 @@
 								<Tooltip content="View Members">
 									<button
 										class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+										aria-label="View team members"
 										on:click={() => viewMembers(item)}
 									>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +229,14 @@
 								</Tooltip>
 
 								<Tooltip content="Edit">
-									<button class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+									<button
+										class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+										aria-label="Edit team"
+										on:click={() => {
+											editingItem = item;
+											showEditModal = true;
+										}}
+									>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
 												stroke-linecap="round"
@@ -239,6 +251,7 @@
 								<Tooltip content="Delete">
 									<button
 										class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600"
+										aria-label="Delete team"
 										on:click={() => {
 											selectedItem = item;
 											showDeleteConfirm = true;
@@ -261,4 +274,25 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Create Modal -->
+	{#if showCreateModal}
+		<TeamCreateModal
+			bind:show={showCreateModal}
+			on:created={() => {
+				init();
+			}}
+		/>
+	{/if}
+
+	<!-- Edit Modal -->
+	{#if showEditModal && editingItem}
+		<TeamEditModal
+			bind:show={showEditModal}
+			item={editingItem}
+			on:updated={() => {
+				init();
+			}}
+		/>
+	{/if}
 {/if}

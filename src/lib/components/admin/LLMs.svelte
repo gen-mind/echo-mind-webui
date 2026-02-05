@@ -4,10 +4,9 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 	import { getLLMs, deleteLLM, testLLM } from '$lib/apis/echomind';
 	import type { LLM, LLMProvider } from '$lib/apis/echomind';
 
@@ -16,12 +15,16 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import LLMCreateModal from './LLMCreateModal.svelte';
+	import LLMEditModal from './LLMEditModal.svelte';
 
 	let loaded = false;
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
+	let showEditModal = false;
 
 	let selectedItem: LLM | null = null;
+	let editingItem: LLM | null = null;
 	let testingLLMs: Set<number> = new Set();
 
 	let items: LLM[] = [];
@@ -179,9 +182,30 @@
 									</button>
 								</Tooltip>
 
+								<Tooltip content="Edit">
+									<button
+										class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+										aria-label="Edit LLM"
+										on:click={() => {
+											editingItem = item;
+											showEditModal = true;
+										}}
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+
 								<Tooltip content="Delete">
 									<button
 										class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600"
+										aria-label="Delete LLM"
 										on:click={() => {
 											selectedItem = item;
 											showDeleteConfirm = true;
@@ -204,4 +228,25 @@
 			{/if}
 		</div>
 	</div>
+
+	<!-- Create Modal -->
+	{#if showCreateModal}
+		<LLMCreateModal
+			bind:show={showCreateModal}
+			on:created={() => {
+				init();
+			}}
+		/>
+	{/if}
+
+	<!-- Edit Modal -->
+	{#if showEditModal && editingItem}
+		<LLMEditModal
+			bind:show={showEditModal}
+			item={editingItem}
+			on:updated={() => {
+				init();
+			}}
+		/>
+	{/if}
 {/if}

@@ -4,10 +4,9 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { onMount } from 'svelte';
 
-	import { WEBUI_NAME, user } from '$lib/stores';
+	import { WEBUI_NAME } from '$lib/stores';
 	import { getEmbeddingModels, activateEmbeddingModel } from '$lib/apis/echomind';
 	import type { EmbeddingModel } from '$lib/apis/echomind';
 
@@ -15,6 +14,7 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import EmbeddingModelCreateModal from './EmbeddingModelCreateModal.svelte';
 
 	let loaded = false;
 	let showCreateModal = false;
@@ -71,6 +71,11 @@
 </svelte:head>
 
 {#if loaded}
+	<EmbeddingModelCreateModal
+		bind:show={showCreateModal}
+		on:created={() => init()}
+	/>
+
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 		<div class="flex justify-between items-center">
 			<div class="text-lg font-medium">Embedding Models</div>
