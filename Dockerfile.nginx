@@ -43,6 +43,9 @@ RUN ls -la /app/build && \
 # =============================================================================
 FROM nginx:1.27-alpine
 
+# Install wget for healthcheck (not included in alpine by default)
+RUN apk add --no-cache wget
+
 # Copy built static files
 COPY --from=build /app/build /usr/share/nginx/html
 
