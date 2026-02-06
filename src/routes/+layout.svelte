@@ -800,8 +800,8 @@
 
 				if (localStorage.token) {
 					// Get Session User Info
-					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
+					// Silently handle expired/invalid tokens — just redirect to login
+					const sessionUser = await getSessionUser(localStorage.token).catch(() => {
 						return null;
 					});
 
