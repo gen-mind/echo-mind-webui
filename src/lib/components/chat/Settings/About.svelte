@@ -152,25 +152,23 @@
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 		</div>
 
+		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+			WebUI forked from
+			<a
+				class=" text-gray-500 dark:text-gray-300 font-medium"
+				href="https://github.com/open-webui/open-webui"
+				target="_blank">Open WebUI</a
+			>
+		</div>
+
 		<div>
 			<pre
 				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
-					href="https://openwebui.com"
+					href="https://genmind.ch"
 					target="_blank"
-					class="underline">Open WebUI Inc.</a
-				> <a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
-					>All rights reserved.</a
-				>
+					class="underline">GenMind</a
+				> All rights reserved.
 </pre>
-		</div>
-
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-			{$i18n.t('Created by')}
-			<a
-				class=" text-gray-500 dark:text-gray-300 font-medium"
-				href="https://github.com/tjbck"
-				target="_blank">Timothy J. Baek</a
-			>
 		</div>
 	</div>
 </div>

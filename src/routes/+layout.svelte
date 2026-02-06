@@ -604,6 +604,28 @@
 		}
 	};
 
+	// Global 401 interceptor: redirect to login on expired/invalid tokens.
+	// Catches "Signature has expired" errors from any API call.
+	const installAuthInterceptor = () => {
+		const originalFetch = window.fetch;
+		window.fetch = async (...args) => {
+			const response = await originalFetch(...args);
+			if (
+				response.status === 401 &&
+				localStorage.token &&
+				!window.location.pathname.startsWith('/auth')
+			) {
+				console.warn('🔒 401 received — token expired, redirecting to login');
+				localStorage.removeItem('token');
+				user.set(null);
+				const currentUrl = `${window.location.pathname}${window.location.search}`;
+				const encodedUrl = encodeURIComponent(currentUrl);
+				location.href = `/auth?redirect=${encodedUrl}`;
+			}
+			return response;
+		};
+	};
+
 	const windowMessageEventHandler = async (event) => {
 		if (
 			!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
@@ -620,6 +642,7 @@
 	};
 
 	onMount(async () => {
+		installAuthInterceptor();
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
