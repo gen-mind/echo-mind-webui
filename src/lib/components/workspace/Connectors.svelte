@@ -10,9 +10,19 @@
 	import {
 		getConnectors,
 		deleteConnector,
-		triggerConnectorSync
+		triggerConnectorSync,
+		getGoogleAuthStatus,
+		openGoogleOAuthPopup,
+		revokeGoogleAuth,
+		createConnector
 	} from '$lib/apis/echomind';
-	import type { Connector, ConnectorType, ConnectorStatus } from '$lib/apis/echomind';
+	import type {
+		Connector,
+		ConnectorType,
+		ConnectorStatus,
+		GoogleService,
+		GoogleAuthStatus
+	} from '$lib/apis/echomind';
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Badge from '../common/Badge.svelte';
@@ -34,13 +44,28 @@
 	let items: Connector[] = [];
 	let itemsLoading = false;
 
+	// Google Workspace state
+	let googleStatus: GoogleAuthStatus | null = null;
+	let googleLoading = false;
+	let connectingService: GoogleService | null = null;
+
+	const googleServices: { service: GoogleService; label: string; icon: string; connectorType: ConnectorType }[] = [
+		{ service: 'drive', label: 'Google Drive', icon: '📁', connectorType: 'CONNECTOR_TYPE_GOOGLE_DRIVE' },
+		{ service: 'gmail', label: 'Gmail', icon: '📧', connectorType: 'CONNECTOR_TYPE_GMAIL' },
+		{ service: 'calendar', label: 'Calendar', icon: '📅', connectorType: 'CONNECTOR_TYPE_GOOGLE_CALENDAR' },
+		{ service: 'contacts', label: 'Contacts', icon: '👤', connectorType: 'CONNECTOR_TYPE_GOOGLE_CONTACTS' }
+	];
+
 	const typeLabels: Record<ConnectorType, string> = {
 		CONNECTOR_TYPE_UNSPECIFIED: 'Unknown',
 		CONNECTOR_TYPE_TEAMS: 'Microsoft Teams',
 		CONNECTOR_TYPE_GOOGLE_DRIVE: 'Google Drive',
 		CONNECTOR_TYPE_ONEDRIVE: 'OneDrive',
 		CONNECTOR_TYPE_WEB: 'Web Crawler',
-		CONNECTOR_TYPE_FILE: 'File Upload'
+		CONNECTOR_TYPE_FILE: 'File Upload',
+		CONNECTOR_TYPE_GMAIL: 'Gmail',
+		CONNECTOR_TYPE_GOOGLE_CALENDAR: 'Google Calendar',
+		CONNECTOR_TYPE_GOOGLE_CONTACTS: 'Google Contacts'
 	};
 
 	const typeIcons: Record<ConnectorType, string> = {
@@ -49,7 +74,10 @@
 		CONNECTOR_TYPE_GOOGLE_DRIVE: '📁',
 		CONNECTOR_TYPE_ONEDRIVE: '☁️',
 		CONNECTOR_TYPE_WEB: '🌐',
-		CONNECTOR_TYPE_FILE: '📄'
+		CONNECTOR_TYPE_FILE: '📄',
+		CONNECTOR_TYPE_GMAIL: '📧',
+		CONNECTOR_TYPE_GOOGLE_CALENDAR: '📅',
+		CONNECTOR_TYPE_GOOGLE_CONTACTS: '👤'
 	};
 
 	const statusColors: Record<ConnectorStatus, string> = {
@@ -81,6 +109,58 @@
 			toast.error(`Failed to load connectors: ${e}`);
 		}
 		itemsLoading = false;
+	};
+
+	const loadGoogleStatus = async () => {
+		googleLoading = true;
+		try {
+			googleStatus = await getGoogleAuthStatus(localStorage.token);
+		} catch {
+			// Google OAuth not configured or not available — hide section
+			googleStatus = null;
+		}
+		googleLoading = false;
+	};
+
+	const handleGoogleConnect = async (service: GoogleService, connectorType: ConnectorType) => {
+		connectingService = service;
+		try {
+			const result = await openGoogleOAuthPopup(localStorage.token, service);
+			if (result.success) {
+				toast.success(`${service} connected successfully`);
+
+				// Check if connector already exists for this type
+				const existing = items.find((c) => c.type === connectorType);
+				if (!existing) {
+					// Auto-create connector
+					const label = googleServices.find((s) => s.service === service)?.label ?? service;
+					await createConnector(localStorage.token, {
+						name: label,
+						type: connectorType,
+						scope: 'CONNECTOR_SCOPE_USER',
+						config: {},
+						refresh_freq_minutes: 60
+					});
+				}
+
+				await Promise.all([loadGoogleStatus(), init()]);
+			} else {
+				toast.error(`${service} authorization was cancelled or failed`);
+			}
+		} catch (e) {
+			toast.error(`Failed to connect ${service}: ${e}`);
+		}
+		connectingService = null;
+	};
+
+	const handleGoogleDisconnect = async () => {
+		try {
+			await revokeGoogleAuth(localStorage.token);
+			toast.success('Google account disconnected');
+			await loadGoogleStatus();
+		} catch (e) {
+			toast.error(`Failed to disconnect: ${e}`);
+		}
 	};
 
 	const handleSync = async (connector: Connector) => {
@@ -116,7 +196,7 @@
 	};
 
 	onMount(async () => {
-		await init();
+		await Promise.all([init(), loadGoogleStatus()]);
 		loaded = true;
 	});
 </script>
@@ -145,6 +225,53 @@
 	/>
 
 	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
+		<!-- Google Workspace Section -->
+		{#if googleStatus !== null}
+			<div class="mb-6">
+				<div class="flex justify-between items-center mb-3">
+					<div class="text-lg font-medium">Google Workspace</div>
+					{#if googleStatus.connected}
+						<button
+							class="text-sm text-red-500 hover:text-red-600 transition"
+							on:click={handleGoogleDisconnect}
+						>
+							Disconnect All
+						</button>
+					{/if}
+				</div>
+
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+					{#each googleServices as { service, label, icon, connectorType }}
+						{@const isConnected = googleStatus?.services?.[service] ?? false}
+						{@const isConnecting = connectingService === service}
+						<button
+							class="flex flex-col items-center gap-2 p-4 rounded-lg border transition
+								{isConnected
+									? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
+									: 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/10'}"
+							disabled={isConnecting}
+							on:click={() => {
+								if (!isConnected) {
+									handleGoogleConnect(service, connectorType);
+								}
+							}}
+						>
+							<span class="text-3xl">{icon}</span>
+							<span class="text-sm font-medium dark:text-white">{label}</span>
+							{#if isConnecting}
+								<Spinner class="w-4 h-4" />
+							{:else if isConnected}
+								<Badge color="green">Connected</Badge>
+							{:else}
+								<span class="text-xs text-gray-500">Click to connect</span>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- Connectors Section -->
 		<div class="flex justify-between items-center">
 			<div class="text-lg font-medium">Connectors</div>
 			<button

@@ -35,7 +35,10 @@
 		{ value: 'CONNECTOR_TYPE_WEB', label: 'Web Crawler', icon: '🌐' },
 		{ value: 'CONNECTOR_TYPE_TEAMS', label: 'Microsoft Teams', icon: '💬' },
 		{ value: 'CONNECTOR_TYPE_GOOGLE_DRIVE', label: 'Google Drive', icon: '📁' },
-		{ value: 'CONNECTOR_TYPE_ONEDRIVE', label: 'OneDrive', icon: '☁️' }
+		{ value: 'CONNECTOR_TYPE_ONEDRIVE', label: 'OneDrive', icon: '☁️' },
+		{ value: 'CONNECTOR_TYPE_GMAIL', label: 'Gmail', icon: '📧' },
+		{ value: 'CONNECTOR_TYPE_GOOGLE_CALENDAR', label: 'Google Calendar', icon: '📅' },
+		{ value: 'CONNECTOR_TYPE_GOOGLE_CONTACTS', label: 'Google Contacts', icon: '👤' }
 	];
 
 	const scopes: { value: ConnectorScope; label: string }[] = [
@@ -258,6 +261,10 @@
 						<p class="mt-2 text-xs text-gray-500">
 							{$i18n.t('Requires Microsoft Graph API authentication configured in the backend')}
 						</p>
+					</div>
+				{:else if connectorType === 'CONNECTOR_TYPE_GMAIL' || connectorType === 'CONNECTOR_TYPE_GOOGLE_CALENDAR' || connectorType === 'CONNECTOR_TYPE_GOOGLE_CONTACTS'}
+					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+						{$i18n.t('Requires Google OAuth. Use the Google Workspace section above to connect first.')}
 					</div>
 				{:else if connectorType === 'CONNECTOR_TYPE_FILE'}
 					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">

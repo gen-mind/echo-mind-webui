@@ -70,7 +70,10 @@
 		CONNECTOR_TYPE_GOOGLE_DRIVE: 'Google Drive',
 		CONNECTOR_TYPE_ONEDRIVE: 'OneDrive',
 		CONNECTOR_TYPE_WEB: 'Web Crawler',
-		CONNECTOR_TYPE_FILE: 'File Upload'
+		CONNECTOR_TYPE_FILE: 'File Upload',
+		CONNECTOR_TYPE_GMAIL: 'Gmail',
+		CONNECTOR_TYPE_GOOGLE_CALENDAR: 'Google Calendar',
+		CONNECTOR_TYPE_GOOGLE_CONTACTS: 'Google Contacts'
 	};
 
 	// Populate form when item changes
@@ -300,6 +303,10 @@
 									class="w-full px-3 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 								/>
 							</label>
+						</div>
+					{:else if item.type === 'CONNECTOR_TYPE_GMAIL' || item.type === 'CONNECTOR_TYPE_GOOGLE_CALENDAR' || item.type === 'CONNECTOR_TYPE_GOOGLE_CONTACTS'}
+						<div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+							{$i18n.t('This connector syncs data via Google OAuth. Manage authorization in the Google Workspace section.')}
 						</div>
 					{/if}
 
