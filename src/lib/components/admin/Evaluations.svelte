@@ -5,6 +5,7 @@
 
 	import Leaderboard from './Evaluations/Leaderboard.svelte';
 	import Feedbacks from './Evaluations/Feedbacks.svelte';
+	import Ragas from './Evaluations/Ragas.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -12,7 +13,7 @@
 	$: {
 		const pathParts = $page.url.pathname.split('/');
 		const tabFromPath = pathParts[pathParts.length - 1];
-		selectedTab = ['leaderboard', 'feedback'].includes(tabFromPath) ? tabFromPath : 'leaderboard';
+		selectedTab = ['leaderboard', 'feedback', 'ragas'].includes(tabFromPath) ? tabFromPath : 'leaderboard';
 	}
 
 	$: if (selectedTab) {
@@ -107,6 +108,31 @@
 				</div>
 				<div class=" self-center">{$i18n.t('Feedback')}</div>
 			</button>
+
+			<button
+				id="ragas"
+				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+				'ragas'
+					? ''
+					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				on:click={() => {
+					goto('/admin/evaluations/ragas');
+				}}
+			>
+				<div class=" self-center mr-2">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="size-4"
+					>
+						<path
+							d="M12 2a1 1 0 0 1 1 1v10a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1ZM6 7a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1ZM9 5a1 1 0 0 1 1 1v7a1 1 0 1 1-2 0V6a1 1 0 0 1 1-1ZM3 10a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1Z"
+						/>
+					</svg>
+				</div>
+				<div class=" self-center">{$i18n.t('RAGAS')}</div>
+			</button>
 		</div>
 
 		<div class="flex-1 mt-1 lg:mt-0 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll">
@@ -114,6 +140,8 @@
 				<Leaderboard />
 			{:else if selectedTab === 'feedback'}
 				<Feedbacks />
+			{:else if selectedTab === 'ragas'}
+				<Ragas />
 			{/if}
 		</div>
 	</div>
