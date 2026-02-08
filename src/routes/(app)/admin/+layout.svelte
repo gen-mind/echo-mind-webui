@@ -94,6 +94,13 @@
 							href="/admin/embedding-models">{$i18n.t('Embedding Models')}</a
 						>
 
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/vector-viz')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/vector-viz">{$i18n.t('Vector Viz')}</a
+						>
+
 						<!-- <a
 							class="min-w-fit p-1.5 {$page.url.pathname.includes('/admin/analytics')
 								? ''

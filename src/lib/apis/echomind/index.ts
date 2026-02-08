@@ -10,3 +10,5 @@ export * from './users';
 export * from './teams';
 export * from './upload';
 export * from './google-auth';
+export * from './projector';
+export * from './evaluation';
