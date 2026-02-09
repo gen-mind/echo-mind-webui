@@ -5,6 +5,7 @@
 
 	import { toast } from 'svelte-sonner';
 	import { onMount } from 'svelte';
+	import { t } from 'i18next';
 
 	import { WEBUI_NAME } from '$lib/stores';
 	import {
@@ -155,7 +156,7 @@
 							// createConnector returned null (error)
 							console.error('[Connectors] createConnector returned null');
 							toast.warning(
-								$i18n.t(
+								t(
 									'Authorization successful, but failed to create connector. You can create it manually.'
 								),
 								{ duration: 6000 }
@@ -164,7 +165,7 @@
 					} catch (createError) {
 						console.error('[Connectors] Failed to auto-create connector:', createError);
 						toast.warning(
-							$i18n.t(
+							t(
 								'Authorization successful, but failed to create connector. You can create it manually.'
 							),
 							{ duration: 6000 }
@@ -175,7 +176,7 @@
 				await Promise.all([loadGoogleStatus(), init()]);
 			} else {
 				// User cancelled or closed popup
-				toast.info($i18n.t('Authorization was cancelled. You can try again anytime.'));
+				toast.info(t('Authorization was cancelled. You can try again anytime.'));
 			}
 		} catch (e) {
 			// Enhanced error handling with specific messages
@@ -183,7 +184,7 @@
 
 			if (errorMessage.includes('not configured') || errorMessage.includes('501')) {
 				toast.error(
-					$i18n.t(
+					t(
 						'Google integration is not configured on this server. Please contact your system administrator or support team to enable Google services.'
 					),
 					{ duration: 10000 }
@@ -197,15 +198,15 @@
 				);
 			} else if (errorMessage.includes('Popup was blocked')) {
 				toast.error(
-					$i18n.t('Popup was blocked by your browser. Please allow popups for this site and try again.'),
+					t('Popup was blocked by your browser. Please allow popups for this site and try again.'),
 					{ duration: 6000 }
 				);
 			} else if (errorMessage.includes('timed out')) {
-				toast.error($i18n.t('Authorization timed out. Please try again.'));
+				toast.error(t('Authorization timed out. Please try again.'));
 			} else if (errorMessage.includes('401') || errorMessage.includes('403')) {
-				toast.error($i18n.t('Authentication failed. Please sign in again.'));
+				toast.error(t('Authentication failed. Please sign in again.'));
 			} else {
-				toast.error(`${$i18n.t('Failed to connect')} ${service}: ${errorMessage}`);
+				toast.error(`${t('Failed to connect')} ${service}: ${errorMessage}`);
 				console.error(`[Connectors] Google OAuth error for ${service}:`, e);
 			}
 		} finally {
