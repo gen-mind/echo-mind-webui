@@ -575,6 +575,17 @@
 								</div>
 							</div>
 						{/if}
+
+						<!-- Privacy Policy and Terms of Service Links -->
+						<div class="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
+							<a href="/privacy" class="hover:text-gray-700 dark:hover:text-gray-300 underline">
+								Privacy Policy
+							</a>
+							<span class="mx-2">•</span>
+							<a href="/terms" class="hover:text-gray-700 dark:hover:text-gray-300 underline">
+								Terms of Service
+							</a>
+						</div>
 					</div>
 				{/if}
 			</div>
