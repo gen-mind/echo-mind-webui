@@ -122,10 +122,18 @@
 		googleLoading = false;
 	};
 
+	/**
+	 * Handle Google service connection from workspace cards.
+	 * Opens OAuth popup, waits for authorization, auto-creates connector.
+	 *
+	 * @param service - Google service to connect ('drive', 'gmail', etc.)
+	 * @param connectorType - Corresponding connector type enum
+	 */
 	const handleGoogleConnect = async (service: GoogleService, connectorType: ConnectorType) => {
 		connectingService = service;
 		try {
 			const result = await openGoogleOAuthPopup(localStorage.token, service);
+
 			if (result.success) {
 				toast.success(`${service} connected successfully`);
 
@@ -134,23 +142,75 @@
 				if (!existing) {
 					// Auto-create connector
 					const label = googleServices.find((s) => s.service === service)?.label ?? service;
-					await createConnector(localStorage.token, {
-						name: label,
-						type: connectorType,
-						scope: 'CONNECTOR_SCOPE_USER',
-						config: {},
-						refresh_freq_minutes: 60
-					});
+					try {
+						const newConnector = await createConnector(localStorage.token, {
+							name: label,
+							type: connectorType,
+							scope: 'CONNECTOR_SCOPE_USER',
+							config: {},
+							refresh_freq_minutes: 60
+						});
+
+						if (!newConnector) {
+							// createConnector returned null (error)
+							console.error('[Connectors] createConnector returned null');
+							toast.warning(
+								$i18n.t(
+									'Authorization successful, but failed to create connector. You can create it manually.'
+								),
+								{ duration: 6000 }
+							);
+						}
+					} catch (createError) {
+						console.error('[Connectors] Failed to auto-create connector:', createError);
+						toast.warning(
+							$i18n.t(
+								'Authorization successful, but failed to create connector. You can create it manually.'
+							),
+							{ duration: 6000 }
+						);
+					}
 				}
 
 				await Promise.all([loadGoogleStatus(), init()]);
 			} else {
-				toast.error(`${service} authorization was cancelled or failed`);
+				// User cancelled or closed popup
+				toast.info($i18n.t('Authorization was cancelled. You can try again anytime.'));
 			}
 		} catch (e) {
-			toast.error(`Failed to connect ${service}: ${e}`);
+			// Enhanced error handling with specific messages
+			const errorMessage = e?.message || e?.detail || String(e);
+
+			if (errorMessage.includes('not configured') || errorMessage.includes('501')) {
+				toast.error(
+					$i18n.t(
+						'Google integration is not configured on this server. Please contact your system administrator or support team to enable Google services.'
+					),
+					{ duration: 10000 }
+				);
+				console.error(
+					'[ADMIN ACTION REQUIRED] Google OAuth not configured. Required environment variables:\n' +
+						'  GOOGLE_CLIENT_ID=your-app-id.apps.googleusercontent.com\n' +
+						'  GOOGLE_CLIENT_SECRET=GOCSPX-your-secret\n' +
+						'  GOOGLE_REDIRECT_URI=https://demo.echomind.ch/api/v1/google/auth/callback\n' +
+						'Setup guide: https://developers.google.com/identity/protocols/oauth2/web-server#creatingcred'
+				);
+			} else if (errorMessage.includes('Popup was blocked')) {
+				toast.error(
+					$i18n.t('Popup was blocked by your browser. Please allow popups for this site and try again.'),
+					{ duration: 6000 }
+				);
+			} else if (errorMessage.includes('timed out')) {
+				toast.error($i18n.t('Authorization timed out. Please try again.'));
+			} else if (errorMessage.includes('401') || errorMessage.includes('403')) {
+				toast.error($i18n.t('Authentication failed. Please sign in again.'));
+			} else {
+				toast.error(`${$i18n.t('Failed to connect')} ${service}: ${errorMessage}`);
+				console.error(`[Connectors] Google OAuth error for ${service}:`, e);
+			}
+		} finally {
+			connectingService = null;
 		}
-		connectingService = null;
 	};
 
 	const handleGoogleDisconnect = async () => {
