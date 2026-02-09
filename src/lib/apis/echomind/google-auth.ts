@@ -18,7 +18,53 @@ export interface GoogleOAuthResult {
 	service: GoogleService;
 }
 
+export interface GoogleOAuthConfigStatus {
+	configured: boolean;
+	message?: string;
+}
+
 const OAUTH_POPUP_TIMEOUT_MS = 120_000; // 2 minutes
+
+/**
+ * Check if Google OAuth is configured on the backend.
+ *
+ * Public endpoint (no auth required) - checks if GOOGLE_CLIENT_ID etc. are set.
+ * Frontend uses this to decide whether to show Google connector options.
+ *
+ * @returns Promise<GoogleOAuthConfigStatus> - Configuration status
+ *
+ * @example
+ * const status = await checkGoogleOAuthConfigured();
+ * if (!status.configured) {
+ *   console.warn('Google OAuth not available:', status.message);
+ * }
+ */
+export const checkGoogleOAuthConfigured = async (): Promise<GoogleOAuthConfigStatus> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/google/auth/configured`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json'
+			}
+		});
+
+		if (!res.ok) {
+			return {
+				configured: false,
+				message: 'Unable to check Google OAuth configuration'
+			};
+		}
+
+		return await res.json();
+	} catch (error) {
+		console.error('[Google OAuth] Failed to check configuration:', error);
+		return {
+			configured: false,
+			message: 'Backend not reachable'
+		};
+	}
+};
 
 export const getGoogleAuthStatus = async (token: string): Promise<GoogleAuthStatus> => {
 	let error = null;
