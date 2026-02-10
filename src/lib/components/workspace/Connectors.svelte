@@ -138,12 +138,27 @@
 			if (result.success) {
 				toast.success(`${service} connected successfully`);
 
+				console.log('[Connectors] OAuth success, checking for existing connector');
+				console.log('[Connectors] Current items:', items);
+				console.log('[Connectors] Looking for type:', connectorType);
+
 				// Check if connector already exists for this type
 				const existing = items.find((c) => c.type === connectorType);
+				console.log('[Connectors] Existing connector found:', existing);
+
 				if (!existing) {
+					console.log('[Connectors] No existing connector, attempting to create...');
 					// Auto-create connector
 					const label = googleServices.find((s) => s.service === service)?.label ?? service;
 					try {
+						console.log('[Connectors] Calling createConnector with:', {
+							name: label,
+							type: connectorType,
+							scope: 'CONNECTOR_SCOPE_USER',
+							config: {},
+							refresh_freq_minutes: 60
+						});
+
 						const newConnector = await createConnector(localStorage.token, {
 							name: label,
 							type: connectorType,
@@ -151,6 +166,8 @@
 							config: {},
 							refresh_freq_minutes: 60
 						});
+
+						console.log('[Connectors] createConnector result:', newConnector);
 
 						if (!newConnector) {
 							// createConnector returned null (error)
@@ -161,6 +178,9 @@
 								),
 								{ duration: 6000 }
 							);
+						} else {
+							console.log('[Connectors] Connector created successfully:', newConnector);
+							toast.success(t('Connector created successfully'));
 						}
 					} catch (createError) {
 						console.error('[Connectors] Failed to auto-create connector:', createError);
@@ -171,6 +191,8 @@
 							{ duration: 6000 }
 						);
 					}
+				} else {
+					console.log('[Connectors] Connector already exists, skipping creation');
 				}
 
 				await Promise.all([loadGoogleStatus(), init()]);
