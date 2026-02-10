@@ -99,6 +99,39 @@
 		CONNECTOR_STATUS_DISABLED: 'Disabled'
 	};
 
+	/**
+	 * Convert ConnectorType enum string to integer value for API.
+	 * Protobuf enums are serialized as integers in JSON.
+	 */
+	function connectorTypeToInt(type: ConnectorType): number {
+		const mapping: Record<ConnectorType, number> = {
+			CONNECTOR_TYPE_UNSPECIFIED: 0,
+			CONNECTOR_TYPE_TEAMS: 1,
+			CONNECTOR_TYPE_GOOGLE_DRIVE: 2,
+			CONNECTOR_TYPE_ONEDRIVE: 3,
+			CONNECTOR_TYPE_WEB: 4,
+			CONNECTOR_TYPE_FILE: 5,
+			CONNECTOR_TYPE_GMAIL: 6,
+			CONNECTOR_TYPE_GOOGLE_CALENDAR: 7,
+			CONNECTOR_TYPE_GOOGLE_CONTACTS: 8
+		};
+		return mapping[type] ?? 0;
+	}
+
+	/**
+	 * Convert ConnectorScope enum string to integer value for API.
+	 * Protobuf enums are serialized as integers in JSON.
+	 */
+	function connectorScopeToInt(scope: string): number {
+		const mapping: Record<string, number> = {
+			CONNECTOR_SCOPE_UNSPECIFIED: 0,
+			CONNECTOR_SCOPE_USER: 1,
+			CONNECTOR_SCOPE_GROUP: 2,
+			CONNECTOR_SCOPE_ORG: 3
+		};
+		return mapping[scope] ?? 1; // Default to USER
+	}
+
 	const init = async () => {
 		itemsLoading = true;
 		try {
@@ -150,19 +183,22 @@
 					console.log('[Connectors] No existing connector, attempting to create...');
 					// Auto-create connector
 					const label = googleServices.find((s) => s.service === service)?.label ?? service;
+					const typeInt = connectorTypeToInt(connectorType);
+					const scopeInt = connectorScopeToInt('CONNECTOR_SCOPE_USER');
+
 					try {
 						console.log('[Connectors] Calling createConnector with:', {
 							name: label,
-							type: connectorType,
-							scope: 'CONNECTOR_SCOPE_USER',
+							type: typeInt,
+							scope: scopeInt,
 							config: {},
 							refresh_freq_minutes: 60
 						});
 
 						const newConnector = await createConnector(localStorage.token, {
 							name: label,
-							type: connectorType,
-							scope: 'CONNECTOR_SCOPE_USER',
+							type: typeInt,
+							scope: scopeInt,
 							config: {},
 							refresh_freq_minutes: 60
 						});
